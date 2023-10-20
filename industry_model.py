@@ -10,29 +10,25 @@ except ImportError:
     from utils import geometric_series
     from sector_model import IndustrySector
 
-START_YEAR = 2023
-END_YEAR = 2050
-
 data_dict, data_model = import_data()
-allowance_price = np.full(END_YEAR - START_YEAR + 1, 100)
+allowance_price = np.full(data_model["end_year"] - data_model["start_year"] + 1, 100)
 
 class IndustryModel():
     def __init__(
             self,
             data_model : dict = data_model,
             data_dict : dict = data_dict,
-            start_year : int = 2023,
-            end_year : int = 2050,
+            scenario_name="default_scenario"
     ):
-        
+        self.scenario_name = scenario_name  
         self.segments = data_model["segments"]
         self.regions = data_model["regions"]
         self.technologies = data_model["technologies"]
         self.raw_outputs = {}
-        self.start_year = start_year
-        self.end_year = end_year
+        self.start_year = data_model["start_year"]
+        self.end_year = data_model["end_year"]
 
-    def solve(self, p=allowance_price):
+    def solve(self, p=allowance_price, ):
         # saving the allowance price
         self.p = p
         # solving the model for each region and segment
@@ -136,14 +132,15 @@ class IndustryModel():
         )
     
         # Create a dictionary with the results
-        processed_outputs = {
+        processed_outputs_dict = {
             "technology_mix" : pd.concat(technology_mix_list),
             "industry_demand" : pd.concat(industry_demand_list),
             "emissions" : pd.concat(emissions_list),
             "allowance_price": price
         }
 
-        pd.concat(processed_outputs, names="variable").to_csv("processed_outputs.csv")
+        processed_outputs = pd.concat(processed_outputs_dict, names="variable").reset_index()
+        processed_outputs["scenario"] = self.scenario_name
     
         return processed_outputs
         

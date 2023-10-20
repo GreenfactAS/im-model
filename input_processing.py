@@ -19,7 +19,7 @@ def import_data() -> dict:
     -------
     dict
     """
-    input_path = Path("inputs")
+    input_path = Path("im-inputs")
 
     # First import the ctrl file to get the list of parameters, 
     # and - importantly - the start year and end year for the simulation
