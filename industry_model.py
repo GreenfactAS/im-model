@@ -5,10 +5,12 @@ try:
     from .input_processing import import_data
     from .utils import geometric_series
     from .sector_model import IndustrySector
+    from .cost_model import CostModel
 except ImportError:
     from input_processing import import_data
     from utils import geometric_series
     from sector_model import IndustrySector
+    from cost_model import CostModel
 
 data_dict, data_model = import_data()
 allowance_price = np.full(data_model["end_year"] - data_model["start_year"] + 1, 100)
@@ -28,12 +30,13 @@ class IndustryModel():
         self.start_year = data_model["start_year"]
         self.end_year = data_model["end_year"]
 
-    def solve(self, p=allowance_price, ):
+    def solve(self, p=allowance_price):
         # saving the allowance price
         self.p = p
         # solving the model for each region and segment
         for region, segment in product(self.regions, self.segments):
             print(f"Solving {segment} sector in {region}...")
+            # Update the commodity prices
             sector_model = IndustrySector(
                 region_sector_dict = data_dict[f"{region}_{segment}"],
                 start_year = self.start_year,

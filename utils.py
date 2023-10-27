@@ -23,3 +23,20 @@ def set_column_index_name(df, name):
     df_copy.columns.name = name
     return df_copy
 
+def to_multidimensional_array(df : pd.DataFrame) -> np.array:
+    """
+    Convert a DataFrame to a multidimensional array.
+
+    Parameters:
+    df (pd.DataFrame): The DataFrame to convert. 
+
+    Returns:
+    np.array: The multidimensional array.
+    """
+    # Sort the DataFrame by the index, so that the index is in the correct order once converted to a multidimensional array.
+    df_sorted = df.sort_index()
+
+    return df_sorted.values.reshape(
+        *(df_sorted.index.levels[i].size for i in range(df_sorted.index.nlevels)),
+        -1
+        )

@@ -32,67 +32,89 @@ def import_data() -> dict:
     with open(input_path / "data_model.yaml") as file:
         data_model = yaml.load(file, Loader=yaml.FullLoader)
     
-    start_year, end_year = ctrl.loc["start_year"], ctrl.loc["end_year"]
+    start_year, end_year = data_model["start_year"], data_model["end_year"]
     modelling_period = [str(year) for year in range(start_year, end_year)]
+    data_model["years"] = modelling_period
 
     data_dict = {
-    "emission_intensities" : set_column_index_name(pd.read_csv(
-        input_path / "emission_intensities.csv",
-        index_col=["region", "segment", "technology"],
-        usecols=["region", "segment", "technology"] + modelling_period,
-        dtype={year : np.float64 for year in modelling_period},
+        "emission_intensities" : set_column_index_name(pd.read_csv(
+            input_path / "emission_intensities.csv",
+            index_col=["region", "segment", "technology"],
+            usecols=["region", "segment", "technology"] + modelling_period,
+            dtype={year : np.float64 for year in modelling_period},
+            ).sort_index(), "year"),
+        "industrial_demand" : set_column_index_name(pd.read_csv(
+            input_path / "industrial_demand.csv",
+            index_col=["region", "segment"],
+            usecols=["region", "segment"] + modelling_period,
+            dtype={year : np.float64 for year in modelling_period},
+            ).sort_index(), "year"),
+        "γ" : pd.read_csv(
+            input_path / "gamma.csv",
+            index_col=["region", "segment"],
+            usecols=["gamma", "region", "segment"],
+            dtype={"gamma" : np.float64},
+            ).squeeze().sort_index(),
+        "β" : pd.read_csv(
+            input_path / "beta.csv",
+            index_col=["region", "segment"],
+            usecols=["beta", "region", "segment"],
+            dtype={"beta" : np.float64},
+            ).squeeze().sort_index(),
+        "asset_lifetime" : pd.read_csv(
+            input_path / "asset_lifetime.csv",
+            index_col=["region", "segment"],
+            usecols=["asset_lifetime", "region", "segment"],
+            dtype={"asset_lifetime" : np.int8},
+            ).squeeze().sort_index(),
+        "initial_tech_mix" : pd.read_csv(
+            input_path / "initial_tech_mix.csv",
+            index_col=["region", "segment", "technology"],
+            usecols=["percent", "region", "segment", "technology"], 
+            dtype={"percent" : np.float64}
+            ).squeeze().sort_index(),
+        "opex" : set_column_index_name(pd.read_csv(
+            input_path / "opex.csv",
+            index_col=["region", "segment", "technology"],
+            usecols=modelling_period + ["region", "segment", "technology"],
+            dtype={year : np.float64 for year in modelling_period}
+            ).sort_index(), "year"),
+        "capex" : set_column_index_name(pd.read_csv(
+            input_path / "capex.csv",
+            index_col=["region", "segment", "technology"],
+            usecols=modelling_period + ["region", "segment", "technology"],
+            dtype={year : np.float64 for year in modelling_period}
         ).sort_index(), "year"),
-    "industrial_demand" : set_column_index_name(pd.read_csv(
-        input_path / "industrial_demand.csv",
-        index_col=["region", "segment"],
-        usecols=["region", "segment"] + modelling_period,
-        dtype={year : np.float64 for year in modelling_period},
-        ).sort_index(), "year"),
-    "γ" : pd.read_csv(
-        input_path / "gamma.csv",
-        index_col=["region", "segment"],
-        usecols=["gamma", "region", "segment"],
-        dtype={"gamma" : np.float64},
-        ).squeeze().sort_index(),
-    "β" : pd.read_csv(
-        input_path / "beta.csv",
-        index_col=["region", "segment"],
-        usecols=["beta", "region", "segment"],
-        dtype={"beta" : np.float64},
-        ).squeeze().sort_index(),
-    "asset_lifetime" : pd.read_csv(
-        input_path / "asset_lifetime.csv",
-        index_col=["region", "segment"],
-        usecols=["asset_lifetime", "region", "segment"],
-        dtype={"asset_lifetime" : np.int8},
-        ).squeeze().sort_index(),
-    "initial_tech_mix" : pd.read_csv(
-        input_path / "initial_tech_mix.csv",
-        index_col=["region", "segment", "technology"],
-        usecols=["percent", "region", "segment", "technology"], 
-        dtype={"percent" : np.float64}
-        ).squeeze().sort_index(),
-    "opex" : set_column_index_name(pd.read_csv(
-        input_path / "opex.csv",
-        index_col=["region", "segment", "technology"],
-        usecols=modelling_period + ["region", "segment", "technology"],
-        dtype={year : np.float64 for year in modelling_period}
-        ).sort_index(), "year"),
-    "capex" : set_column_index_name(pd.read_csv(
-        input_path / "capex.csv",
-        index_col=["region", "segment", "technology"],
-        usecols=modelling_period + ["region", "segment", "technology"],
-        dtype={year : np.float64 for year in modelling_period}
-    ).sort_index(), "year"),
-    "asset_age" : pd.read_csv(
-        input_path / "asset_age.csv",
-        index_col=["region", "segment", "technology"],
-        usecols=[str(l) for l in range(1,26)] + ["region", "segment", "technology"],
-        dtype={str(l) : np.float64 for l in range(1,26)}
-    ).sort_index()
+        "asset_age" : pd.read_csv(
+            input_path / "asset_age.csv",
+            index_col=["region", "segment", "technology"],
+            usecols=[str(l) for l in range(1,26)] + ["region", "segment", "technology"],
+            dtype={str(l) : np.float64 for l in range(1,26)}
+        ).sort_index(),
     }
 
-    
+    # Add the commodity prices and use data if it is available
+    cost_data_dict = {
+        "commodity_prices" : set_column_index_name(pd.read_csv(
+            input_path / "commodity_prices.csv",
+            index_col=["region", "commodity"],
+            usecols=["region", "commodity"] + modelling_period,
+            dtype={year : np.float64 for year in modelling_period}
+        ).sort_index(), "year"),
+        "commodity_use" : set_column_index_name(pd.read_csv(
+            input_path / "commodity_use.csv",
+            index_col=["segment", "technology", "commodity"],
+            usecols=["segment", "technology", "commodity"] + modelling_period,
+            dtype={year : np.float64 for year in modelling_period}
+        ).sort_index(), "year"),
+        "other_opex" : set_column_index_name(pd.read_csv(
+            input_path / "other_opex.csv",
+            index_col=["segment", "technology"],
+            usecols=["segment", "technology"] + modelling_period,
+            dtype={year : np.float64 for year in modelling_period}
+        ).sort_index(), "year"),
+    }
+
     # Validate the data
     InputValidation(data_dict, data_model).validate()
 
@@ -111,7 +133,6 @@ def import_data() -> dict:
             # Concatenate the original DataFrame with the new DataFrame
             data_dict[name] = pd.concat([data, new_data], axis=1)
 
-
     # Convert the data to numpy format, we do this to increase the speed of the model
     np_data_dict = {}
     for p in product(data_model["regions"], data_model["segments"]):
@@ -123,7 +144,9 @@ def import_data() -> dict:
         np_data_dict[region_segment_str] = {
                     name : extract_data(data) for name, data in data_dict.items()
                 }
-            
+    
+    np_data_dict = {**np_data_dict, **cost_data_dict}
+
     return np_data_dict, data_model
 
     
