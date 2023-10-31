@@ -10,15 +10,16 @@ except ImportError:
 class CostModel():
     def __init__(
         self,
-        opex_other : np.array,
-        commodity_use : np.array,
-        commodity_prices : np.array
+        opex_other : pd.DataFrame,
+        commodity_use : pd.DataFrame,
+        commodity_prices : pd.DataFrame,
+        capex : pd.DataFrame
     ): 
-        self.opex_other = to_multidimensional_array(opex_other)
-        self.commodity_use = to_multidimensional_array(commodity_use)
-        self.commodity_prices = to_multidimensional_array(commodity_prices)
-
-        
+        self.opex_other = opex_other
+        self.commodity_use = commodity_use
+        self.commodity_prices = commodity_prices
+        self.capex = capex
+             
     def update_opex(self, commodity_prices=None) -> np.array:
         """
         Update the opex attribute of the CostModel object.
@@ -32,6 +33,9 @@ class CostModel():
     
         return np.einsum('ijk..., rk...-> rij...', U, P) + Ο[np.newaxis, :, :, :]
 
+    def update_capex(self):
+        return self.capex
+    
 if __name__ == "__main__":
     # Testing
     data_dict, data_model = import_data()
@@ -39,5 +43,5 @@ if __name__ == "__main__":
         opex_other = data_dict["other_opex"],
         commodity_use = data_dict["commodity_use"],
         commodity_prices = data_dict["commodity_prices"]
-    )
+                )
     print("0")

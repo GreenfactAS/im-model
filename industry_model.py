@@ -3,16 +3,18 @@ import pandas as pd
 from itertools import product
 try:
     from .input_processing import import_data
-    from .utils import geometric_series
+    from .utils import geometric_series, enumerated_product
     from .sector_model import IndustrySector
     from .cost_model import CostModel
+    from .database import IndustryDataBase
 except ImportError:
     from input_processing import import_data
-    from utils import geometric_series
+    from utils import geometric_series, enumerated_product
     from sector_model import IndustrySector
     from cost_model import CostModel
+    from database import IndustryDataBase
 
-data_dict, data_model = import_data()
+data_dict, data_model, data_dict_disaggregated = import_data()
 allowance_price = np.full(data_model["end_year"] - data_model["start_year"] + 1, 100)
 
 class IndustryModel():
@@ -20,8 +22,11 @@ class IndustryModel():
             self,
             data_model : dict = data_model,
             data_dict : dict = data_dict,
+            db = IndustryDataBase(),
             scenario_name="default_scenario"
-    ):
+    ):  
+        self.db = db
+        self.data_dict = data_dict
         self.scenario_name = scenario_name  
         self.segments = data_model["segments"]
         self.regions = data_model["regions"]
@@ -30,15 +35,22 @@ class IndustryModel():
         self.start_year = data_model["start_year"]
         self.end_year = data_model["end_year"]
 
-    def solve(self, p=allowance_price):
+    def solve(
+            self, 
+            p=allowance_price, 
+            commodity_prices=None
+            ):
         # saving the allowance price
         self.p = p
         # solving the model for each region and segment
-        for region, segment in product(self.regions, self.segments):
+        for (regon_idx, segment_idx), (region, segment) in enumerated_product(self.regions, self.segments):
             print(f"Solving {segment} sector in {region}...")
             # Update the commodity prices
             sector_model = IndustrySector(
-                region_sector_dict = data_dict[f"{region}_{segment}"],
+                region_sector_dict = self.db.get_sector_region_data(
+                    sector_idx = regon_idx,
+                    region_idx = segment_idx
+                ),
                 start_year = self.start_year,
                 end_year = self.end_year,
             )

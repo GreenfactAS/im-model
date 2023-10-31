@@ -10,7 +10,7 @@ except ImportError:
 START_YEAR = 2023
 END_YEAR = 2050
 
-data_dict, data_model = import_data()
+data_dict, data_model, data_dict_aggregated = import_data()
 allowance_price = np.full(END_YEAR - START_YEAR + 1, 100)
 
 class IndustrySector():
@@ -26,7 +26,7 @@ class IndustrySector():
         self.E = region_sector_dict["emission_intensities"]
         self.D = region_sector_dict["industrial_demand"]
         self.γ = region_sector_dict["γ"]
-        self.L = region_sector_dict["asset_lifetime"]
+        self.L = int(region_sector_dict["asset_lifetime"])
         self.start_year = start_year
         self.end_year = end_year
 

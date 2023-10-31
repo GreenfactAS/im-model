@@ -145,9 +145,11 @@ def import_data() -> dict:
                     name : extract_data(data) for name, data in data_dict.items()
                 }
     
+    pd_data_dict = {**data_dict, **cost_data_dict}
+
     np_data_dict = {**np_data_dict, **cost_data_dict}
 
-    return np_data_dict, data_model
+    return np_data_dict, data_model, pd_data_dict
 
     
 class InputValidation:

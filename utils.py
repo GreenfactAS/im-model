@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-
+from itertools import product
 def geometric_series(b, n):
     # Create a range of exponents from 0 to n-1
     exponents = np.arange(n)
@@ -40,3 +40,7 @@ def to_multidimensional_array(df : pd.DataFrame) -> np.array:
         *(df_sorted.index.levels[i].size for i in range(df_sorted.index.nlevels)),
         -1
         )
+
+def enumerated_product(*args):
+    """Enumerate the product of multiple iterables."""
+    yield from zip(product(*(range(len(x)) for x in args)), product(*args))
