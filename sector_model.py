@@ -88,7 +88,7 @@ class IndustrySector():
     def get_switching_probability(self, t):
         # Extracting names in more readable format
         C_t, γ = self.C[:,t], self.γ
-        return np.exp(-C_t) ** (1/γ) /  (np.exp(-C_t) ** (1/γ)).sum()
+        return np.exp(-C_t*(1/γ)) /  (np.exp(-C_t*(1/γ))).sum()
         
 if __name__ == "__main__":
     model = IndustrySector()

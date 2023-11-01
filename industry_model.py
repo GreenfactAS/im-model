@@ -151,10 +151,19 @@ class IndustryModel():
             "technology_mix" : pd.concat(technology_mix_list),
             "industry_demand" : pd.concat(industry_demand_list),
             "emissions" : pd.concat(emissions_list),
-            "allowance_price": price
+            "allowance_price": price["value"]
         }
 
-        processed_outputs = pd.concat(processed_outputs_dict, names="variable").reset_index()
+        processed_outputs = pd.concat(
+            processed_outputs_dict, 
+            names=[
+                "variable", 
+                "region", 
+                "segment", 
+                "technology", 
+                "year"
+                ]
+            ).reset_index()
         processed_outputs["scenario"] = self.scenario_name
     
         return processed_outputs
@@ -163,3 +172,4 @@ if __name__ == "__main__":
     model = IndustryModel()
     model.solve(allowance_price)
     processed_outputs = model.process_outputs()
+    print(0)

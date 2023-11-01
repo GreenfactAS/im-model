@@ -123,15 +123,11 @@ def import_data() -> dict:
     horizon = data_dict["asset_lifetime"].max()
     for name, data in data_dict.items():
         if isinstance(data, pd.DataFrame) and data.columns.name == "year":
-            last_data = data.iloc[:, -1]
-            last_year = int(data.columns[-1])
+            data_dict[name] = extrapolate_one_horizon_from_final_year(horizon, data)
 
-            # Create a new DataFrame with additional years
-            new_columns = [str(year) for year in range(last_year + 1, last_year + horizon + 1)]
-            new_data = pd.DataFrame(data={col: last_data for col in new_columns}, index=data.index)
-
-            # Concatenate the original DataFrame with the new DataFrame
-            data_dict[name] = pd.concat([data, new_data], axis=1)
+    for name, data in cost_data_dict.items():
+        if isinstance(data, pd.DataFrame) and data.columns.name == "year":
+            cost_data_dict[name] = extrapolate_one_horizon_from_final_year(horizon, data)
 
     # Convert the data to numpy format, we do this to increase the speed of the model
     np_data_dict = {}
@@ -145,11 +141,22 @@ def import_data() -> dict:
                     name : extract_data(data) for name, data in data_dict.items()
                 }
     
+    # TO DO: return only one data dict, the second one is redundant
     pd_data_dict = {**data_dict, **cost_data_dict}
-
     np_data_dict = {**np_data_dict, **cost_data_dict}
 
     return np_data_dict, data_model, pd_data_dict
+
+def extrapolate_one_horizon_from_final_year(horizon, data):
+    last_data = data.iloc[:, -1]
+    last_year = int(data.columns[-1])
+
+    # Create a new DataFrame with additional years
+    new_columns = [str(year) for year in range(last_year + 1, last_year + horizon + 1)]
+    new_data = pd.DataFrame(data={col: last_data for col in new_columns}, index=data.index)
+
+    # Concatenate the original DataFrame with the new DataFrame
+    return pd.concat([data, new_data], axis=1)
 
     
 class InputValidation:
