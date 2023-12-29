@@ -7,10 +7,10 @@ from im_model.utils import to_multidimensional_array
 idx = pd.IndexSlice
 
 # Function to update the charts based on dropdown selection
-def update_tech_mix_emissions_charts(df, segment, region):
-    # Filter the dataframe based on segment and region
-    tech_mix = df[(df['variable'] == "technology_mix") & (df['segment'] == segment) & (df['region'] == region)]
-    emissions = df[(df['variable'] == "emissions") & (df['segment'] == segment) & (df['region'] == region)]
+def update_tech_mix_emissions_charts(df, segment, region, scenario):
+    # Filter the dataframe based on segment, region, and scenario
+    tech_mix = df[(df['variable'] == "technology_mix") & (df['segment'] == segment) & (df['region'] == region) & (df['scenario'] == scenario)]
+    emissions = df[(df['variable'] == "emissions") & (df['segment'] == segment) & (df['region'] == region) & (df['scenario'] == scenario)]
     total_emissions = df[(df['variable'] == "emissions")].groupby(['year', "segment"])['value'].sum().reset_index() 
 
     # Create subplots for technology mix, emissions, and total emissions
