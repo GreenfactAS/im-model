@@ -19,7 +19,7 @@ def import_data() -> dict:
     -------
     dict
     """
-    input_path = Path("im-inputs")
+    input_path = Path("im_inputs")
 
     # First import the ctrl file to get the list of parameters, 
     # and - importantly - the start year and end year for the simulation
@@ -67,18 +67,6 @@ def import_data() -> dict:
             usecols=["asset_lifetime", "region", "segment"],
             dtype={"asset_lifetime" : np.int8},
             ).squeeze().sort_index(),
-        "initial_tech_mix" : pd.read_csv(
-            input_path / "initial_tech_mix.csv",
-            index_col=["region", "segment", "technology"],
-            usecols=["percent", "region", "segment", "technology"], 
-            dtype={"percent" : np.float64}
-            ).squeeze().sort_index(),
-        "opex" : set_column_index_name(pd.read_csv(
-            input_path / "opex.csv",
-            index_col=["region", "segment", "technology"],
-            usecols=modelling_period + ["region", "segment", "technology"],
-            dtype={year : np.float64 for year in modelling_period}
-            ).sort_index(), "year"),
         "capex" : set_column_index_name(pd.read_csv(
             input_path / "capex.csv",
             index_col=["region", "segment", "technology"],
@@ -91,6 +79,12 @@ def import_data() -> dict:
             usecols=[str(l) for l in range(1,26)] + ["region", "segment", "technology"],
             dtype={str(l) : np.float64 for l in range(1,26)}
         ).sort_index(),
+        "elasticities" : pd.read_csv(
+            input_path / "elasticities.csv",
+            index_col=["region", "segment"],
+            usecols=["elasticity", "segment", "region"],
+            dtype={"elasticity" : np.float64}
+        ).sort_index(), 
     }
 
     # Add the commodity prices and use data if it is available
@@ -115,6 +109,28 @@ def import_data() -> dict:
         ).sort_index(), "year"),
     }
 
+    # Add the supply data
+    # need to check whether the supply data is consistent with the model: i.e., if the years are the same as for the other data
+    supply_data = pd.read_csv(
+        input_path / "supply.csv",
+        index_col=["year"],
+        usecols=[
+            "year",
+            "cap",
+            "msr_intake_rate",
+            "msr_injection_rate",
+            "msr_injection_amount",
+            "msr_intake_rate",
+            "tnac",
+        ],
+    )
+
+    initial_price_trajectory = pd.read_csv(
+        input_path / "initial_price_trajectory.csv",
+        index_col=["year"],
+        usecols=["year", "price"],
+    )
+
     # Validate the data
     InputValidation(data_dict, data_model).validate()
 
@@ -138,11 +154,13 @@ def import_data() -> dict:
         extract_data = lambda x : x.loc[p] if (isinstance(x.loc[p], np.float64) | isinstance(x.loc[p], np.int8)) else x.loc[p].values
         # extract data for region-segment
         np_data_dict[region_segment_str] = {
-                    name : extract_data(data) for name, data in data_dict.items()
+                    name : extract_data(data) for name, data in data_dict.items() if name != "elasticities"
                 }
     
     # TO DO: return only one data dict, the second one is redundant
     pd_data_dict = {**data_dict, **cost_data_dict}
+    pd_data_dict["supply"] = supply_data
+    pd_data_dict["initial_price_trajectory"] = initial_price_trajectory
     np_data_dict = {**np_data_dict, **cost_data_dict}
 
     return np_data_dict, data_model, pd_data_dict
@@ -158,7 +176,6 @@ def extrapolate_one_horizon_from_final_year(horizon, data):
     # Concatenate the original DataFrame with the new DataFrame
     return pd.concat([data, new_data], axis=1)
 
-    
 class InputValidation:
     def __init__(self, data, data_model):
         """
@@ -184,9 +201,7 @@ class InputValidation:
         """
         self.validate_emission_intensities()
         self.validate_industrial_demand()
-        self.validate_opex()
         self.validate_capex()
-        self.validate_initial_tech_mix()
         self.validate_gamma()
         self.check_label_names()
     
@@ -199,33 +214,13 @@ class InputValidation:
         # Check that the industrial demand is positive
         if (self.data["industrial_demand"] < 0).any().any():
             raise ValueError("Industrial demand must be positive")
-        
-    def validate_opex(self):
-        # Check that the opex is positive
-        if (self.data["opex"] < 0).any().any():
-            raise ValueError("Opex must be positive")
+
     
     def validate_capex(self):
         # Check that the capex is positive
         if (self.data["capex"] < 0).any().any():
             raise ValueError("Capex must be positive")
     
-    def validate_initial_tech_mix(self):
-        # Check that the initial tech mix is positive
-        if (self.data["initial_tech_mix"] < 0).any():
-            raise ValueError("Initial tech mix must be positive")
-        
-        # Check that the initial tech mix is positive
-        if (self.data["asset_age"] < 0).any().any():
-            raise ValueError("Initial tech mix must be positive")
-        
-        # Check that the initial tech mix sums to 1
-        if not np.isclose(self.data["initial_tech_mix"].groupby(["segment", "region"]).sum().any(), 1):
-            raise ValueError("Initial tech mix must sum to 1")
-        
-        if not np.isclose(self.data["asset_age"].sum(axis=1).groupby(["segment", "region"]).sum().any(), 1):
-            raise ValueError("Asset age must sum to 1")
-        
     def validate_gamma(self):
         # Check that gamma is positive
         if (self.data["γ"] < 0).any():
@@ -246,8 +241,8 @@ class InputValidation:
             for name, data in self.data.items():
                 if label in data.index.names:            
                     if not np.array_equal(
-                            data.index.get_level_values(label).astype(str).drop_duplicates().sort_values().values, 
-                            data_model_labels[label]
+                            data.index.get_level_values(label).astype(str).str.lower().drop_duplicates().sort_values().values, 
+                            sorted(list(set(data_model_labels[label])))
                         ):
                         raise ValueError(
                             f"The {label} in the {name} data do not match the {label} in the data model"
@@ -258,3 +253,4 @@ if __name__ == '__main__':
     if "inputs" in os.getcwd(): 
         os.chdir("..")
     import_data()
+    print(0)

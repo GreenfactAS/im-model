@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from itertools import product
+
 def geometric_series(b, n):
     # Create a range of exponents from 0 to n-1
     exponents = np.arange(n)
@@ -36,10 +37,13 @@ def to_multidimensional_array(df : pd.DataFrame) -> np.array:
     # Sort the DataFrame by the index, so that the index is in the correct order once converted to a multidimensional array.
     df_sorted = df.sort_index()
 
-    return df_sorted.values.reshape(
-        *(df_sorted.index.levels[i].size for i in range(df_sorted.index.nlevels)),
-        -1
-        )
+    if isinstance(df.index, pd.MultiIndex):
+        return df_sorted.values.reshape(
+            *(df_sorted.index.get_level_values(i).unique().size for i in range(df_sorted.index.nlevels)),
+            -1
+            )
+    else:
+        return df_sorted.values
 
 def enumerated_product(*args):
     """Enumerate the product of multiple iterables."""
